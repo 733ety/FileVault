@@ -889,7 +889,7 @@ async function syncData(silent = false) {
       if (!silent) toast('⚠ Configurează Supabase în Setări.');
       btn.textContent = '🔄'; return;
     }
-    const res = await fetch(S.cfg.sbUrl + '/rest/v1/viluti_data?id=eq.1&select=*', {
+    const res = await fetch(S.cfg.sbUrl + '/rest/v1/filevault_data?id=eq.1&select=*', {
       headers: sbHeaders()
     });
     if (!res.ok) throw new Error('Fetch ' + res.status);
@@ -924,11 +924,11 @@ async function pushSupabase(mode) {
     updated_at: new Date().toISOString()
   });
   if (mode === 'insert') {
-    await fetch(S.cfg.sbUrl + '/rest/v1/viluti_data', {
+    await fetch(S.cfg.sbUrl + '/rest/v1/filevault_data', {
       method: 'POST', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' }, body
     });
   } else {
-    await fetch(S.cfg.sbUrl + '/rest/v1/viluti_data?id=eq.1', {
+    await fetch(S.cfg.sbUrl + '/rest/v1/filevault_data?id=eq.1', {
       method: 'PATCH', headers: sbHeaders(),
       body: JSON.stringify({ payload: S.data, pass_hash: S.cfg.passHash, updated_at: new Date().toISOString() })
     });
