@@ -190,7 +190,8 @@
 
 
     /* PWA INSTALL BANNER */
-    .install-banner{position:fixed;bottom:calc(72px + env(safe-area-inset-bottom,0px) + 10px);left:12px;right:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:12px;z-index:200;box-shadow:0 8px 32px rgba(79,110,247,0.4);transform:translateY(120%);transition:transform .4s cubic-bezier(.22,1,.36,1);animation:none;}
+    .install-banner{display:none;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:var(--radius);padding:14px 16px;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(79,110,247,0.35);margin-bottom:14px;}
+    .install-banner.show{display:flex;}
     .install-banner.show{transform:translateY(0);}
     .install-banner-icon{font-size:28px;flex-shrink:0;}
     .install-banner-text{flex:1;}
@@ -248,6 +249,7 @@
       </div>
       <div class="header-btns">
         <button class="icon-btn" id="syncBtn" onclick="syncData()" title="Sincronizare">🔄</button>
+        <button class="icon-btn" id="installBtn" onclick="triggerInstall()" title="Instalează aplicația">📲</button>
         <button class="icon-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
       </div>
     </div>
@@ -259,6 +261,34 @@
     <div class="panel active" id="p-home">
       <!-- Categorii view -->
       <div id="viewCats">
+
+<!-- PWA INSTALL BANNER - Android -->
+<div class="install-banner" id="installBanner">
+  <div class="install-banner-icon">📲</div>
+  <div class="install-banner-text">
+    <strong>Instalează FileVault</strong>
+    <span>Adaugă pe ecranul principal</span>
+  </div>
+  <div class="install-banner-btns">
+    <button class="install-yes" onclick="doInstall()">Instalează</button>
+    <button class="install-no" onclick="dismissInstall()">✕</button>
+  </div>
+</div>
+
+<!-- iOS HINT -->
+<div class="install-banner" id="iosHintBanner" style="flex-direction:column;align-items:flex-start;gap:8px;">
+  <div style="display:flex;align-items:center;gap:10px;width:100%">
+    <span style="font-size:24px">📲</span>
+    <div style="flex:1"><strong style="color:#fff;font-size:14px;font-weight:700;display:block">Instalează FileVault</strong><span style="color:rgba(255,255,255,0.8);font-size:12px">Adaugă pe ecranul principal</span></div>
+    <button class="install-no" onclick="dismissInstall()">✕</button>
+  </div>
+  <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:12px;width:100%;font-size:12px;color:#fff;line-height:1.8">
+    1. Apasă <strong>Share</strong> ⬆️ din bara Safari<br>
+    2. Derulează și apasă <strong>"Add to Home Screen"</strong> 🏠<br>
+    3. Apasă <strong>Add</strong> în dreapta sus
+  </div>
+</div>
+
         <div class="search-wrap">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" id="searchInput" placeholder="Caută fișiere..." oninput="filterFiles()"/>
@@ -383,35 +413,7 @@
       </div>
     </div>
 
-  
-<!-- PWA INSTALL BANNER -->
-<div class="install-banner" id="installBanner">
-  <div class="install-banner-icon">📲</div>
-  <div class="install-banner-text">
-    <strong>Instalează FileVault</strong>
-    <span>Adaugă pe ecranul principal</span>
-  </div>
-  <div class="install-banner-btns">
-    <button class="install-yes" onclick="doInstall()">Instalează</button>
-    <button class="install-no" onclick="dismissInstall()">✕</button>
-  </div>
-</div>
-
-<!-- iOS HINT -->
-<div class="install-banner" id="iosHintBanner" style="flex-direction:column;align-items:flex-start;gap:8px;">
-  <div style="display:flex;align-items:center;gap:10px;width:100%">
-    <span style="font-size:24px">📲</span>
-    <div style="flex:1"><strong style="color:#fff;font-size:14px;font-weight:700;display:block">Instalează FileVault</strong><span style="color:rgba(255,255,255,0.8);font-size:12px">Adaugă pe ecranul principal</span></div>
-    <button class="install-no" onclick="dismissInstall()">✕</button>
-  </div>
-  <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:12px;width:100%;font-size:12px;color:#fff;line-height:1.8">
-    1. Apasă <strong>Share</strong> <span style="font-size:16px">⬆️</span> din bara Safari<br>
-    2. Derulează și apasă <strong>"Add to Home Screen"</strong> 🏠<br>
-    3. Apasă <strong>Add</strong> în dreapta sus
-  </div>
-</div>
-
-</div><!-- /content -->
+  </div><!-- /content -->
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
@@ -569,7 +571,13 @@ function enterGuest() {
   renderAll();
   syncData(true);
 }
-function hidePinOverlay() { document.getElementById('pinOverlay').style.display = 'none'; }
+function hidePinOverlay() {
+  document.getElementById('pinOverlay').style.display = 'none';
+  setTimeout(() => {
+    showInstallPromptAndroid();
+    showInstallPromptIOS();
+  }, 100);
+}
 function showAdminControls() {
   ['addCatBtn','addSubcatBtn','addFileBtn'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = ''; });
 }
@@ -1036,13 +1044,28 @@ function isInStandaloneMode() {
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  if (!isInStandaloneMode() && !sessionStorage.getItem(INSTALL_DISMISSED_KEY)) {
+  // Will show after login via showInstallPromptAndroid()
+});
+
+function showInstallPromptAndroid() {
+  if (deferredPrompt && !isInStandaloneMode() && !sessionStorage.getItem(INSTALL_DISMISSED_KEY)) {
     setTimeout(() => {
       document.getElementById('installBanner').classList.add('show');
     }, 3000);
   }
-});
+}
 
+function triggerInstall() {
+  if (deferredPrompt) {
+    doInstall();
+  } else if (isIOS()) {
+    // Show iOS hint banner
+    document.getElementById('iosHintBanner').classList.add('show');
+    document.getElementById('installBanner').classList.remove('show');
+  } else {
+    toast('ℹ️ Deschide în Chrome și apasă "Adaugă pe ecran principal"');
+  }
+}
 function doInstall() {
   if (!deferredPrompt) return;
   deferredPrompt.prompt();
@@ -1060,11 +1083,13 @@ function dismissInstall() {
   sessionStorage.setItem(INSTALL_DISMISSED_KEY, '1');
 }
 
-// iOS — show hint after 3s if not installed
-if (isIOS() && !isInStandaloneMode() && !sessionStorage.getItem(INSTALL_DISMISSED_KEY)) {
-  setTimeout(() => {
-    document.getElementById('iosHintBanner').classList.add('show');
-  }, 3000);
+// iOS — show hint after login (called from showApp)
+function showInstallPromptIOS() {
+  if (isIOS() && !isInStandaloneMode() && !sessionStorage.getItem(INSTALL_DISMISSED_KEY)) {
+    setTimeout(() => {
+      document.getElementById('iosHintBanner').classList.add('show');
+    }, 3000);
+  }
 }
 
 if ('serviceWorker' in navigator) {
