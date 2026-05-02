@@ -347,19 +347,19 @@
         <p style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6">Obții credențialele gratuit din <a href="https://console.cloud.google.com" target="_blank" style="color:var(--accent)">Google Cloud Console</a></p>
       </div>
       <div class="settings-section">
-        <div class="settings-title">🌐 Sincronizare GitHub</div>
+        <div class="settings-title">⚡ Sincronizare Supabase</div>
         <div class="setting-row">
-          <label class="setting-label">Personal Access Token</label>
-          <input class="form-input" id="cfgGhToken" type="password" placeholder="ghp_xxxxxxxxxxxx" style="margin-bottom:8px"/>
-          <label class="setting-label">Repository (user/repo)</label>
-          <input class="form-input" id="cfgGhRepo" placeholder="username/filevault" style="margin-bottom:8px"/>
-          <button class="submit-btn" onclick="saveGhCfg()">Salvează</button>
+          <label class="setting-label">Supabase URL</label>
+          <input class="form-input" id="cfgSbUrl" placeholder="https://xxxx.supabase.co" style="margin-bottom:8px"/>
+          <label class="setting-label">Supabase Anon Key</label>
+          <input class="form-input" id="cfgSbKey" type="password" placeholder="sb_publishable_..." style="margin-bottom:8px"/>
+          <button class="submit-btn" onclick="saveSbCfg()">Salvează &amp; Conectează</button>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6">Datele se sincronizează automat pe GitHub. Toți utilizatorii cu accesul corect vor vedea modificările.</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6">Datele se sincronizează <strong>în timp real</strong> pentru toți utilizatorii. Modificările apar la toată lumea în max 30 secunde.</p>
       </div>
       <div class="settings-section" style="border-color:rgba(226,75,74,0.2)">
         <div class="settings-title" style="color:var(--danger)">⚠ Resetare</div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6">Șterge toate datele locale. Datele de pe GitHub rămân.</p>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6">Șterge toate datele locale. Datele de pe Supabase rămân.</p>
         <button class="submit-btn" style="background:var(--danger)" onclick="resetLocalData()">Resetează date locale</button>
       </div>
     </div>
