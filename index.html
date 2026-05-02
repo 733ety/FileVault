@@ -7,10 +7,10 @@
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="FileVault"/>
+  <meta name="apple-mobile-web-app-title" content="Viluti"/>
   <link rel="manifest" href="manifest.json"/>
   <link rel="apple-touch-icon" href="icons/icon-192.png"/>
-  <title>FileVault</title>
+  <title>Viluti</title>
   <style>
     :root {
       --bg:#0f0f1a;--surface:#1a1a2e;--surface2:#22223b;
@@ -229,7 +229,7 @@
   <div class="pin-logo">
     <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
   </div>
-  <div class="pin-title">FileVault</div>
+  <div class="pin-title">Viluti</div>
   <div class="pin-sub">Introdu parola pentru acces.</div>
   <input class="pin-input" id="pinInput" type="password" placeholder="Parolă de acces" onkeydown="if(event.key==='Enter')tryPin()"/>
   <div class="pin-err" id="pinErr"></div>
@@ -245,7 +245,7 @@
         <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
       </div>
       <div class="header-text">
-        <h1>FileVault</h1>
+        <h1>Viluti</h1>
         <p id="statusText">Se încarcă...</p>
       </div>
       <div class="header-btns">
@@ -267,7 +267,7 @@
 <div class="install-banner" id="installBanner">
   <div class="install-banner-icon">📲</div>
   <div class="install-banner-text">
-    <strong>Instalează FileVault</strong>
+    <strong>Instalează Viluti</strong>
     <span>Adaugă pe ecranul principal</span>
   </div>
   <div class="install-banner-btns">
@@ -280,7 +280,7 @@
 <div class="install-banner" id="iosHintBanner" style="flex-direction:column;align-items:flex-start;gap:8px;">
   <div style="display:flex;align-items:center;gap:10px;width:100%">
     <span style="font-size:24px">📲</span>
-    <div style="flex:1"><strong style="color:#fff;font-size:14px;font-weight:700;display:block">Instalează FileVault</strong><span style="color:rgba(255,255,255,0.8);font-size:12px">Adaugă pe ecranul principal</span></div>
+    <div style="flex:1"><strong style="color:#fff;font-size:14px;font-weight:700;display:block">Instalează Viluti</strong><span style="color:rgba(255,255,255,0.8);font-size:12px">Adaugă pe ecranul principal</span></div>
     <button class="install-no" onclick="dismissInstall()">✕</button>
   </div>
   <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:12px;width:100%;font-size:12px;color:#fff;line-height:1.8">
@@ -889,7 +889,7 @@ async function syncData(silent = false) {
       if (!silent) toast('⚠ Configurează Supabase în Setări.');
       btn.textContent = '🔄'; return;
     }
-    const res = await fetch(S.cfg.sbUrl + '/rest/v1/filevault_data?id=eq.1&select=*', {
+    const res = await fetch(S.cfg.sbUrl + '/rest/v1/viluti_data?id=eq.1&select=*', {
       headers: sbHeaders()
     });
     if (!res.ok) throw new Error('Fetch ' + res.status);
@@ -924,11 +924,11 @@ async function pushSupabase(mode) {
     updated_at: new Date().toISOString()
   });
   if (mode === 'insert') {
-    await fetch(S.cfg.sbUrl + '/rest/v1/filevault_data', {
+    await fetch(S.cfg.sbUrl + '/rest/v1/viluti_data', {
       method: 'POST', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' }, body
     });
   } else {
-    await fetch(S.cfg.sbUrl + '/rest/v1/filevault_data?id=eq.1', {
+    await fetch(S.cfg.sbUrl + '/rest/v1/viluti_data?id=eq.1', {
       method: 'PATCH', headers: sbHeaders(),
       body: JSON.stringify({ payload: S.data, pass_hash: S.cfg.passHash, updated_at: new Date().toISOString() })
     });
