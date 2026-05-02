@@ -984,10 +984,22 @@ async function loadDriveFiles() {
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button class="action-btn" onclick="navigator.clipboard.writeText('${esc(f.webViewLink||'')}').then(()=>toast('✓ Link copiat!'))">📋</button>
           <a class="action-btn" href="${esc(f.webViewLink||'#')}" target="_blank" rel="noopener" style="text-decoration:none">↗</a>
+          <button class="del-btn" onclick="deleteDriveFile('${f.id}','${esc(f.name)}')">🗑️</button>
         </div>
       </div>
     `).join('') : '<div class="empty"><span class="empty-icon">☁️</span>Drive-ul este gol.</div>';
   } catch(e) { list.innerHTML = `<div class="empty">⚠ Eroare: ${e.message}</div>`; }
+}
+async function deleteDriveFile(fileId, fileName) {
+  if (!confirm('Ștergi "' + fileName + '" din Google Drive? Acțiunea este ireversibilă!')) return;
+  try {
+    const res = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + S.drive.token }
+    });
+    if (res.status === 204) { toast('✓ Fișier șters din Drive!'); loadDriveFiles(); }
+    else { toast('⚠ Eroare la ștergere: ' + res.status); }
+  } catch(e) { toast('⚠ Eroare: ' + e.message); }
 }
 function uploadToDrive() { document.getElementById('driveFileInput').click(); }
 async function handleDriveUpload(ev) {
