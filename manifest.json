@@ -1,6 +1,6 @@
 {
-  "name": "FileVault",
-  "short_name": "FileVault",
+  "name": "Viluti",
+  "short_name": "Viluti",
   "description": "Organizator de fișiere cu Google Drive",
   "start_url": "./",
   "display": "standalone",
