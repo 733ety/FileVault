@@ -483,6 +483,11 @@ window.onload = () => {
 function load() {
   try { const d = localStorage.getItem(DATA_KEY); if (d) S.data = JSON.parse(d); } catch(e){}
   try { const c = localStorage.getItem(CFG_KEY); if (c) S.cfg = {...S.cfg,...JSON.parse(c)}; } catch(e){}
+  // Always enforce hardcoded credentials (override localStorage)
+  S.cfg.clientId = '416198963618-jdk57qqrudb7ckplfn9bm2u4g2vhcj55.apps.googleusercontent.com';
+  S.cfg.apiKey   = 'AIzaSyA4wUBKc4bkdzTkDTYjg2t52GPqRrXmEGU';
+  S.cfg.sbUrl    = 'https://hbiuwuivkysrzzcicfjd.supabase.co';
+  S.cfg.sbKey    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiaXV3dWl2a3lzcnp6Y2ljZmpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2Nzc5MzYsImV4cCI6MjA5MzI1MzkzNn0.IW3Cc-ZrolqDNtgOeyeijv3s8Yhltd6FwoogN0kbxKA';
 }
 function save() {
   S.data.ts = new Date().toISOString();
