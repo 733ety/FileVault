@@ -188,6 +188,25 @@
     .toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);color:var(--text);font-size:13px;padding:10px 20px;border-radius:var(--radius-sm);opacity:0;transition:all 0.25s;z-index:999;white-space:nowrap;border:0.5px solid var(--border);pointer-events:none;}
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+
+    /* PWA INSTALL BANNER */
+    .install-banner{position:fixed;bottom:calc(72px + env(safe-area-inset-bottom,0px) + 10px);left:12px;right:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:12px;z-index:200;box-shadow:0 8px 32px rgba(79,110,247,0.4);transform:translateY(120%);transition:transform .4s cubic-bezier(.22,1,.36,1);animation:none;}
+    .install-banner.show{transform:translateY(0);}
+    .install-banner-icon{font-size:28px;flex-shrink:0;}
+    .install-banner-text{flex:1;}
+    .install-banner-text strong{display:block;font-size:14px;font-weight:700;color:#fff;}
+    .install-banner-text span{font-size:12px;color:rgba(255,255,255,0.8);}
+    .install-banner-btns{display:flex;gap:8px;flex-shrink:0;}
+    .install-yes{background:#fff;color:var(--accent);border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;}
+    .install-no{background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;cursor:pointer;}
+    /* iOS hint sheet */
+    .ios-hint{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px calc(env(safe-area-inset-bottom,0px) + 24px);z-index:400;transform:translateY(100%);transition:transform .35s cubic-bezier(.22,1,.36,1);border-top:0.5px solid var(--border);}
+    .ios-hint.show{transform:translateY(0);}
+    .ios-hint-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;}
+    .ios-hint h3{font-size:16px;font-weight:700;margin-bottom:16px;text-align:center;}
+    .ios-hint-step{display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:14px;color:var(--muted);}
+    .ios-hint-step .step-num{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+    .ios-hint-close{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;}
     /* UPDATE BANNER */
     .update-banner{position:fixed;top:0;left:0;right:0;background:var(--accent);color:#fff;font-size:13px;font-weight:600;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:600;transform:translateY(-100%);transition:transform 0.3s;}
     .update-banner.show{transform:translateY(0);}
@@ -364,7 +383,35 @@
       </div>
     </div>
 
-  </div><!-- /content -->
+  
+<!-- PWA INSTALL BANNER -->
+<div class="install-banner" id="installBanner">
+  <div class="install-banner-icon">📲</div>
+  <div class="install-banner-text">
+    <strong>Instalează FileVault</strong>
+    <span>Adaugă pe ecranul principal</span>
+  </div>
+  <div class="install-banner-btns">
+    <button class="install-yes" onclick="doInstall()">Instalează</button>
+    <button class="install-no" onclick="dismissInstall()">✕</button>
+  </div>
+</div>
+
+<!-- iOS HINT -->
+<div class="install-banner" id="iosHintBanner" style="flex-direction:column;align-items:flex-start;gap:8px;">
+  <div style="display:flex;align-items:center;gap:10px;width:100%">
+    <span style="font-size:24px">📲</span>
+    <div style="flex:1"><strong style="color:#fff;font-size:14px;font-weight:700;display:block">Instalează FileVault</strong><span style="color:rgba(255,255,255,0.8);font-size:12px">Adaugă pe ecranul principal</span></div>
+    <button class="install-no" onclick="dismissInstall()">✕</button>
+  </div>
+  <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:12px;width:100%;font-size:12px;color:#fff;line-height:1.8">
+    1. Apasă <strong>Share</strong> <span style="font-size:16px">⬆️</span> din bara Safari<br>
+    2. Derulează și apasă <strong>"Add to Home Screen"</strong> 🏠<br>
+    3. Apasă <strong>Add</strong> în dreapta sus
+  </div>
+</div>
+
+</div><!-- /content -->
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
@@ -974,6 +1021,52 @@ async function sha256(msg) {
 }
 
 // ─── SERVICE WORKER ───────────────────────
+
+// ─── PWA INSTALL PROMPT ───────────────────
+let deferredPrompt = null;
+const INSTALL_DISMISSED_KEY = 'fv_install_dismissed';
+
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+function isInStandaloneMode() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (!isInStandaloneMode() && !sessionStorage.getItem(INSTALL_DISMISSED_KEY)) {
+    setTimeout(() => {
+      document.getElementById('installBanner').classList.add('show');
+    }, 3000);
+  }
+});
+
+function doInstall() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(choice => {
+    if (choice.outcome === 'accepted') {
+      dismissInstall();
+    }
+    deferredPrompt = null;
+  });
+}
+
+function dismissInstall() {
+  document.getElementById('installBanner').classList.remove('show');
+  document.getElementById('iosHintBanner').classList.remove('show');
+  sessionStorage.setItem(INSTALL_DISMISSED_KEY, '1');
+}
+
+// iOS — show hint after 3s if not installed
+if (isIOS() && !isInStandaloneMode() && !sessionStorage.getItem(INSTALL_DISMISSED_KEY)) {
+  setTimeout(() => {
+    document.getElementById('iosHintBanner').classList.add('show');
+  }, 3000);
+}
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then(reg => {
     reg.addEventListener('updatefound', () => {
