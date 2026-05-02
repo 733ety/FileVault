@@ -464,7 +464,7 @@ const DEF_HASH = '1ef15fffcb583d811e89515c0b5ec1092f32cca1bbef4bfacbb5423661618a
 
 let S = {
   data: { cats: [], v: 1, ts: null },
-  cfg: { passHash: DEF_HASH, clientId: '', apiKey: '', ghToken: '', ghRepo: '' },
+  cfg: { passHash: DEF_HASH, clientId: '', apiKey: '', sbUrl: '', sbKey: '' },
   ui: { catId: null, subcatId: null, emoji: '📁', color: COLORS[0] },
   drive: { token: null, connected: false },
   isAdmin: false,
@@ -477,6 +477,7 @@ window.onload = () => {
   buildEmojiGrid();
   buildColorGrid();
   applyTheme();
+  if (sbReady()) initSupabase();
 };
 
 function load() {
@@ -500,7 +501,7 @@ function tryPin() {
       setStatus('👤 Admin');
       showAdminControls();
       renderAll();
-      syncData(true);
+      initSupabase();
       toast('✓ Bine ai venit!');
     } else {
       document.getElementById('pinErr').textContent = 'Parolă incorectă.';
@@ -528,8 +529,8 @@ if (sessionStorage.getItem(SESS_KEY) === 'ok') {
     hidePinOverlay();
     showAdminControls();
     renderAll();
-    syncData(true);
-    setStatus('👤 Admin');
+    initSupabase();
+    setStatus('👤 Admin · ⚡ Live');
   });
 }
 
@@ -766,18 +767,20 @@ function pickColor(c) {
 function loadCfgForm() {
   document.getElementById('cfgClientId').value = S.cfg.clientId || '';
   document.getElementById('cfgApiKey').value = S.cfg.apiKey || '';
-  document.getElementById('cfgGhToken').value = S.cfg.ghToken || '';
-  document.getElementById('cfgGhRepo').value = S.cfg.ghRepo || '';
+  document.getElementById('cfgSbUrl').value = S.cfg.sbUrl || '';
+  document.getElementById('cfgSbKey').value = S.cfg.sbKey || '';
 }
 function saveDriveCfg() {
   S.cfg.clientId = document.getElementById('cfgClientId').value.trim();
   S.cfg.apiKey = document.getElementById('cfgApiKey').value.trim();
   save(); toast('✓ Drive configurat!');
 }
-function saveGhCfg() {
-  S.cfg.ghToken = document.getElementById('cfgGhToken').value.trim();
-  S.cfg.ghRepo = document.getElementById('cfgGhRepo').value.trim();
-  save(); toast('✓ GitHub configurat!');
+function saveSbCfg() {
+  S.cfg.sbUrl = document.getElementById('cfgSbUrl').value.trim().replace(/\/$/, '');
+  S.cfg.sbKey = document.getElementById('cfgSbKey').value.trim();
+  save();
+  initSupabase();
+  toast('✓ Supabase configurat!');
 }
 function changePassword() {
   const p1 = document.getElementById('newPass1').value;
@@ -795,45 +798,83 @@ function resetLocalData() {
   renderAll(); toast('Date locale resetate.');
 }
 
-// ─── GITHUB SYNC ──────────────────────────
+// ─── SUPABASE SYNC ────────────────────────
+
+function sbHeaders() {
+  return {
+    'apikey': S.cfg.sbKey,
+    'Authorization': 'Bearer ' + S.cfg.sbKey,
+    'Content-Type': 'application/json'
+  };
+}
+
+function sbReady() { return !!(S.cfg.sbUrl && S.cfg.sbKey); }
+
+function initSupabase() {
+  if (!sbReady()) return;
+  syncData(true);
+  clearInterval(window._sbPoll);
+  window._sbPoll = setInterval(() => syncData(true), 30000);
+}
+
 async function syncData(silent = false) {
   const btn = document.getElementById('syncBtn');
   btn.textContent = '⏳';
-  const { ghToken, ghRepo } = S.cfg;
   try {
-    if (ghToken && ghRepo) {
-      const [owner, repo] = ghRepo.split('/');
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/data.json`;
-      const res = await fetch(url, { headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json' } });
-      if (res.ok) {
-        const json = await res.json();
-        const remote = JSON.parse(atob(json.content.replace(/\n/g,'')));
-        if (remote._passHash) { S.cfg.passHash = remote._passHash; save(); }
-        const rd = new Date(remote.ts || 0), ld = new Date(S.data.ts || 0);
-        if (rd > ld) { S.data = remote; save(); renderAll(); if (!silent) toast('✓ Date actualizate din GitHub!'); }
-        else { await pushGH(json.sha); if (!silent) toast('✓ Sincronizat pe GitHub!'); }
-      } else if (res.status === 404) { await pushGH(null); if (!silent) toast('✓ Fișier creat pe GitHub!'); }
-    } else { if (!silent) toast('⚠ Configurează GitHub în Setări.'); }
-  } catch(e) { if (!silent) toast('⚠ Eroare: ' + e.message); }
+    if (!sbReady()) {
+      if (!silent) toast('⚠ Configurează Supabase în Setări.');
+      btn.textContent = '🔄'; return;
+    }
+    const res = await fetch(S.cfg.sbUrl + '/rest/v1/filevault_data?id=eq.1&select=*', {
+      headers: sbHeaders()
+    });
+    if (!res.ok) throw new Error('Fetch ' + res.status);
+    const rows = await res.json();
+    if (rows.length === 0) {
+      if (S.isAdmin) { await pushSupabase('insert'); if (!silent) toast('✓ Date inițializate!'); }
+    } else {
+      const remote = rows[0];
+      const remoteTs = new Date(remote.updated_at || 0);
+      const localTs  = new Date(S.data.ts || 0);
+      if (remoteTs > localTs) {
+        S.data = { ...remote.payload, ts: remote.updated_at };
+        if (remote.pass_hash) S.cfg.passHash = remote.pass_hash;
+        save(); renderAll();
+        if (!silent) toast('✓ Date actualizate!');
+      } else if (S.isAdmin && !silent) {
+        await pushSupabase('update');
+        toast('✓ Sincronizat!');
+      }
+    }
+  } catch(e) { if (!silent) toast('⚠ Eroare sync: ' + e.message); }
   btn.textContent = '🔄';
-  setStatus(S.isAdmin ? '👤 Admin' : '👁 Vizitator');
+  setStatus(S.isAdmin ? '👤 Admin · ⚡' : '');
 }
 
-async function pushGH(sha) {
-  const { ghToken, ghRepo } = S.cfg;
-  const [owner, repo] = ghRepo.split('/');
-  const payload = { ...S.data, _passHash: S.cfg.passHash };
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
-  const body = { message: 'FileVault sync ' + new Date().toISOString(), content, ...(sha ? { sha } : {}) };
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data.json`, {
-    method: 'PUT', headers: { Authorization: `token ${ghToken}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' },
-    body: JSON.stringify(body)
+async function pushSupabase(mode) {
+  if (!sbReady() || !S.isAdmin) return;
+  const body = JSON.stringify({
+    id: 1,
+    payload: S.data,
+    pass_hash: S.cfg.passHash,
+    updated_at: new Date().toISOString()
   });
-  if (!res.ok) throw new Error('GitHub push ' + res.status);
+  if (mode === 'insert') {
+    await fetch(S.cfg.sbUrl + '/rest/v1/filevault_data', {
+      method: 'POST', headers: { ...sbHeaders(), 'Prefer': 'return=minimal' }, body
+    });
+  } else {
+    await fetch(S.cfg.sbUrl + '/rest/v1/filevault_data?id=eq.1', {
+      method: 'PATCH', headers: sbHeaders(),
+      body: JSON.stringify({ payload: S.data, pass_hash: S.cfg.passHash, updated_at: new Date().toISOString() })
+    });
+  }
 }
 
 function autoSync() {
-  if (S.cfg.ghToken && S.cfg.ghRepo) { clearTimeout(window._st); window._st = setTimeout(() => syncData(true), 2000); }
+  if (!sbReady() || !S.isAdmin) return;
+  clearTimeout(window._st);
+  window._st = setTimeout(() => pushSupabase('update'), 1500);
 }
 
 // ─── GOOGLE DRIVE ─────────────────────────
