@@ -233,6 +233,7 @@
   <div class="pin-sub">Introdu parola pentru acces.</div>
   <input class="pin-input" id="pinInput" type="password" placeholder="Parolă de acces" onkeydown="if(event.key==='Enter')tryPin()"/>
   <div class="pin-err" id="pinErr"></div>
+  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px;font-size:13px;color:rgba(255,255,255,0.7)"><input type="checkbox" id="rememberMe" style="width:16px;height:16px;accent-color:#4f6ef7;cursor:pointer"/> Ține-mă minte</label>
   <button class="pin-btn" onclick="tryPin()">🔑 Intră în aplicație</button>
 </div>
 
@@ -249,7 +250,7 @@
       </div>
       <div class="header-btns">
         <button class="icon-btn" id="syncBtn" onclick="syncData()" title="Sincronizare">🔄</button>
-        <button class="icon-btn" id="installBtn" onclick="triggerInstall()" title="Instalează aplicația">📲</button>
+        <button class="icon-btn" id="logoutBtn" onclick="logout()" title="Deconectare">🚪</button>
         <button class="icon-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
       </div>
     </div>
@@ -547,11 +548,13 @@ function save() {
 // ─── PIN ──────────────────────────────────
 function tryPin() {
   const val = document.getElementById('pinInput').value;
+  const remember = document.getElementById('rememberMe').checked;
   sha256(val).then(h => {
     if (h === S.cfg.passHash) {
       S.isAdmin = true;
       hidePinOverlay();
       sessionStorage.setItem(SESS_KEY, 'ok');
+      if (remember) localStorage.setItem(SESS_KEY, 'ok');
       setStatus('👤 Admin');
       showAdminControls();
       renderAll();
@@ -583,8 +586,9 @@ function showAdminControls() {
 }
 
 // check session
-if (sessionStorage.getItem(SESS_KEY) === 'ok') {
+if (sessionStorage.getItem(SESS_KEY) === 'ok' || localStorage.getItem(SESS_KEY) === 'ok') {
   S.isAdmin = true;
+  if (localStorage.getItem(SESS_KEY) === 'ok') sessionStorage.setItem(SESS_KEY, 'ok');
   window.addEventListener('load', () => {
     hidePinOverlay();
     showAdminControls();
@@ -1026,6 +1030,20 @@ function toast(msg) {
 async function sha256(msg) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ─── LOGOUT ───────────────────────────────
+function logout() {
+  if (!confirm('Ești sigur că vrei să te deconectezi?')) return;
+  sessionStorage.removeItem(SESS_KEY);
+  localStorage.removeItem(SESS_KEY);
+  S.isAdmin = false;
+  clearInterval(window._sbPoll);
+  document.getElementById('pinOverlay').style.display = 'flex';
+  document.getElementById('pinInput').value = '';
+  document.getElementById('pinErr').textContent = '';
+  document.getElementById('rememberMe').checked = false;
+  toast('✓ Deconectat!');
 }
 
 // ─── SERVICE WORKER ───────────────────────
